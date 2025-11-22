@@ -66,13 +66,23 @@ ai-safety-knowledge-base/
    pytest
    ```
 
-5. **Generate the living source catalog**
+5. **Add new sources via catalog or local files**
 
-   ```bash
-   python -m safety_kb.catalog --output sources_catalog.md
-   ```
+   - **Web links**: edit `sources_catalog.md` and add a table row with the source name, kind (e.g., `website`), mode, and a Markdown hyperlink in the last column.
+   - **Local documents**: drop `.txt`, `.md`, `.html`, or `.pdf` files into `sources/files/`.
+   - Then run:
 
-   Commit or publish the resulting Markdown so collaborators always see the up-to-date registry with doc counts and ingestion status.
+     ```bash
+     python -m safety_kb.catalog_sync --catalog sources_catalog.md --sources-dir sources/files
+     ```
+
+     This command:
+
+     1. Parses the catalog rows, upserts those sources, and (for `website` kinds) fetches/ingests their content.
+     2. Discovers new files under `sources/files/`, ingests them, and adds rows to the catalog with working hyperlinks.
+     3. Re-generates `sources_catalog.md` from the live registry so the page always reflects what is actually ingested.
+
+   Commit both the ingested files (if desired) and the refreshed catalog.
 
 ## Integration With MCP
 

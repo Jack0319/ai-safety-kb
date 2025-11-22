@@ -8,6 +8,7 @@ src/ai_safety_knowledge_base.egg-info/requires.txt
 src/ai_safety_knowledge_base.egg-info/top_level.txt
 src/safety_kb/__init__.py
 src/safety_kb/catalog.py
+src/safety_kb/catalog_sync.py
 src/safety_kb/config.py
 src/safety_kb/indexing.py
 src/safety_kb/models.py
@@ -24,6 +25,7 @@ src/safety_kb/utils/chunking.py
 src/safety_kb/utils/embedding.py
 src/safety_kb/utils/logging.py
 src/safety_kb/utils/text_cleaning.py
+tests/test_catalog_sync.py
 tests/test_indexing.py
 tests/test_ingestion_sources.py
 tests/test_retrieval.py
