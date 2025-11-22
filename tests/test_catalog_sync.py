@@ -8,9 +8,9 @@ from safety_kb.storage import SQLAlchemyStore
 
 CATALOG_MD = """# Knowledge Base Sources
 
-| Source | Kind | Mode | Status | Docs | Last Ingested | Link |
-| --- | --- | --- | --- | --- | --- | --- |
-| Example Site | website | poll | • | 0 | | [Example](https://example.com) |
+| Source | Kind | Status | Docs | Last Ingested | Link |
+| --- | --- | --- | --- | --- | --- |
+| Example Site | website | • | 0 | | [Example](https://example.com) |
 """
 
 
@@ -68,4 +68,15 @@ async def test_sync_catalog_with_local_file(tmp_path, monkeypatch, store, test_s
     assert "Example Site" in names
     assert "demo" in names
     assert "paper" in names
+
+    # introduce a duplicate catalog row and resync to ensure deduplication
+    markdown += "| Sleeper Agents | file | • | 0 |  | [link](./sources/files/Sleeper%20Agents.pdf) |\n"
+    catalog_path.write_text(markdown, encoding="utf-8")
+    await sync_catalog(
+        catalog_path=catalog_path,
+        sources_dir=sources_dir,
+        settings=test_settings,
+    )
+    markdown = catalog_path.read_text(encoding="utf-8")
+    assert markdown.count("Sleeper Agents") == 1
 

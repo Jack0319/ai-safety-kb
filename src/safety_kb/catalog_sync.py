@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable, List, Sequence
+from urllib.parse import quote
 
 import httpx
 from PyPDF2 import PdfReader
@@ -30,12 +31,19 @@ ALLOWED_SUFFIXES = {".txt", ".md", ".html", ".htm", ".pdf"}
 class CatalogEntry:
     name: str
     kind: str
-    ingestion_mode: str
+    status: str
+    doc_count: str
     url: str
 
     @property
     def slug(self) -> str:
         return slugify(self.name)
+
+    @property
+    def ingestion_mode(self) -> str:
+        if self.kind.lower() in {"website", "repo"}:
+            return "poll"
+        return "snapshot"
 
 
 def slugify(name: str) -> str:
@@ -50,11 +58,11 @@ def parse_catalog_entries(markdown: str) -> List[CatalogEntry]:
         if not line.startswith("|"):
             continue
         parts = [part.strip() for part in line.split("|")[1:-1]]
-        if len(parts) < 7:
+        if len(parts) < 6:
             continue
         if parts[0].startswith("---"):
             continue
-        link_cell = parts[6]
+        link_cell = parts[5]
         match = CATALOG_LINK_RE.search(link_cell)
         if not match:
             continue
@@ -62,7 +70,8 @@ def parse_catalog_entries(markdown: str) -> List[CatalogEntry]:
             CatalogEntry(
                 name=parts[0],
                 kind=parts[1],
-                ingestion_mode=parts[2],
+                status=parts[2],
+                doc_count=parts[3],
                 url=match.group(1),
             )
         )
@@ -88,7 +97,7 @@ async def ingest_catalog_links(
             canonical_url=entry.url,
             ingestion_mode=entry.ingestion_mode,
         )
-        await store.upsert_source(source)
+        source = await ensure_unique_source(store, source)
         if entry.kind.lower() != "website":
             continue
         try:
@@ -151,14 +160,15 @@ async def ingest_local_files(
         relative_uri = path.as_posix()
         name = path.stem
         slug = slugify(name)
+        encoded_path = quote(relative_uri)
         source = Source(
             id=f"source_file_{slug}",
             name=name,
             kind="file",
-            canonical_url=f"./{relative_uri}",
+            canonical_url=f"./{encoded_path}",
             ingestion_mode="snapshot",
         )
-        await store.upsert_source(source)
+        source = await ensure_unique_source(store, source)
         try:
             text = read_local_file_text(path)
         except Exception as exc:  # pragma: no cover - decoding errors, corrupt files
@@ -186,6 +196,21 @@ async def ingest_local_files(
         chunks = build_chunks(document)
         await store.upsert_document(document, chunks)
         await store.record_ingestion_status(source.id, "success")
+
+
+async def ensure_unique_source(store: SQLAlchemyStore, source: Source) -> Source:
+    existing = await store.find_sources_by_url(source.canonical_url)
+    if existing:
+        winner = next((src for src in existing if src.id == source.id), None)
+        if winner is None:
+            winner = max(existing, key=lambda src: src.doc_count)
+        duplicates = [src for src in existing if src.id != winner.id]
+        source.id = winner.id
+        removable = [dup.id for dup in duplicates if dup.doc_count == 0]
+        if removable:
+            await store.delete_sources_by_ids(removable)
+    await store.upsert_source(source)
+    return source
 
 
 async def sync_catalog(

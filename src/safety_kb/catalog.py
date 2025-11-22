@@ -12,12 +12,7 @@ from .config import Settings, get_settings
 from .models import Source
 from .storage import SQLAlchemyStore
 
-STATUS_EMOJI = {
-    "success": "✅",
-    "failed": "❌",
-    "pending": "⏳",
-    None: "•",
-}
+STATUS_EMOJI = {"success": "✅", "failed": "❌", "pending": "⏳", None: "•"}
 
 
 async def render_catalog_markdown(store: SQLAlchemyStore) -> str:
@@ -29,8 +24,8 @@ async def render_catalog_markdown(store: SQLAlchemyStore) -> str:
     lines: List[str] = [
         "# Knowledge Base Sources",
         "",
-        "| Source | Kind | Mode | Status | Docs | Last Ingested | Link |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Source | Kind | Status | Docs | Last Ingested | Link |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for source in sources:
         emoji = STATUS_EMOJI.get(source.last_ingestion_status, "•")
@@ -39,10 +34,11 @@ async def render_catalog_markdown(store: SQLAlchemyStore) -> str:
             if isinstance(source.last_ingested_at, datetime)
             else ""
         )
+        link = source.canonical_url
         lines.append(
-            f"| {source.name} | {source.kind} | {source.ingestion_mode} | "
+            f"| {source.name} | {source.kind} | "
             f"{emoji} {source.last_ingestion_status or ''} | {source.doc_count} | "
-            f"{last_ingested} | [link]({source.canonical_url}) |"
+            f"{last_ingested} | [link]({link}) |"
         )
     lines.append("")
     return "\n".join(lines)

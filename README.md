@@ -55,7 +55,7 @@ ai-safety-knowledge-base/
    For local dev:
 
    ```bash
-   python -m safety_kb.storage --init-db
+   python3 -m safety_kb.storage --init-db
    ```
 
    For production Postgres, apply `migrations/001_init.sql` and ensure `pgvector` is enabled.
@@ -73,7 +73,7 @@ ai-safety-knowledge-base/
    - Then run:
 
      ```bash
-     python -m safety_kb.catalog_sync --catalog sources_catalog.md --sources-dir sources/files
+     python3 -m safety_kb.catalog_sync --catalog sources_catalog.md --sources-dir sources/files
      ```
 
      This command:

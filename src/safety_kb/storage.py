@@ -84,6 +84,19 @@ class SQLAlchemyStore:
             result = await sess.execute(stmt)
             return [row[0].to_source() for row in result.fetchall()]
 
+    async def find_sources_by_url(self, url: str) -> List[Source]:
+        async with self.session() as sess:
+            stmt = select(SourceORM).where(SourceORM.canonical_url == url)
+            result = await sess.execute(stmt)
+            return [row[0].to_source() for row in result.fetchall()]
+
+    async def delete_sources_by_ids(self, source_ids: Sequence[str]) -> None:
+        if not source_ids:
+            return
+        async with self.session() as sess:
+            await sess.execute(delete(SourceORM).where(SourceORM.id.in_(list(source_ids))))
+            await sess.commit()
+
     async def get_source(self, source_id: str) -> Source | None:
         async with self.session() as sess:
             instance = await sess.get(SourceORM, source_id)
